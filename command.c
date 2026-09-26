@@ -37,7 +37,23 @@ void scan_input(char *prompt, char *input_string)
         }
         else
         {
+            char *cmd = get_command(input_string);    // Get command from the arguments 
+
+            int type = cmd_type(cmd);                // Check the command type 
             
+            if(type == BUILTIN)
+            {
+               printf("\nBuildin Command\n");
+            }
+            else if(type == EXTERN)
+            {
+               printf("\nExternal Command\n");
+            }
+            else if(type == INVALID)
+            {
+                printf("\n%s : command not found\n",cmd);
+            }
+
         }
 
     }
