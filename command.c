@@ -3,6 +3,7 @@
 
 char path[100];
 char *external_commands[154];
+int status ;
 
 void scan_input(char *prompt, char *input_string)
 {
@@ -16,7 +17,7 @@ void scan_input(char *prompt, char *input_string)
     {
         if(getcwd(path,100))
         {
-          //  printf("\nPWD : %s\n",path);
+            //  printf("\nPWD : %s\n",path);
         }
     } 
 
@@ -43,11 +44,11 @@ void scan_input(char *prompt, char *input_string)
             
             if(type == BUILTIN)
             {
-               printf("\nBuildin Command\n");
+                execute_internal_commands(cmd); 
             }
             else if(type == EXTERN)
             {
-               printf("\nExternal Command\n");
+                
             }
             else if(type == INVALID)
             {
@@ -66,7 +67,7 @@ int extract_external_commands(char **ext)
     if(ptr == NULL)
     {
         printf(RED"\nCan't import external commands...!\n"RESET);
-        return 0;
+        return FAILED;
     }
 
     int i = 0;
@@ -84,12 +85,66 @@ int extract_external_commands(char **ext)
 
     *(ext+i) = NULL;
 
-    return 1;
+    return SUCCESS;
 }
 
 void print_path(char *prompt,char *path)
 {
     printf(GREEN"%s"RESET,prompt);
     printf(BLUE"~%s$ "RESET,path);
+
+}
+
+void execute_internal_commands(char *cmd)
+{
+     if(strncmp(cmd,"cd",2) == 0)
+     {
+         char *space = strchr(cmd+3,' ');
+
+         if(space)
+         {
+             printf("minishell: cd: too many arguments\n");
+             return ;
+         }
+         
+         int flag = chdir(cmd+3);
+
+         if(!flag)
+         {
+             char *ptr = getcwd(path,100); // On successfully changing the direcctory the new path is stored inside the path array
+         }
+         else
+         {
+            if(errno == ENOENT)
+            {
+                printf("minishell: cd: %s: No such file or directory\n",cmd+3);
+                return ;
+            }
+         }
+     }
+     else if(strncmp(cmd,"pwd",3) == 0)
+     {
+          char *ptr = getcwd(path,100);
+          printf("%s\n",ptr);
+     }
+     else if(strncmp(cmd,"exit",4) == 0)
+     {
+        _exit(0);
+     }
+     else if(strncmp(cmd,"echo $$",7) == 0)
+     {
+          printf("%d\n",getpid());
+     }
+     else if(strncmp(cmd,"echo $?",7) == 0)
+     {
+          printf("%d ",WEXITSTATUS(status)); 
+          if(cmd+7 != NULL)
+          printf("%s\n",cmd+7);
+     } 
+     else if(strncmp(cmd,"echo $SHELL",11) == 0)
+     {
+        char *ch = getenv("SHELL");
+        printf("%s\n",ch);
+     }  
 
 }

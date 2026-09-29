@@ -5,6 +5,7 @@
 #include<unistd.h>
 #include<stdlib.h>
 #include<string.h>
+#include<errno.h>
 
 #define RED         "\x1b[1;31m"
 #define GREEN       "\x1b[1;32m"
@@ -15,6 +16,9 @@
 #define BUILTIN         1
 #define EXTERN          2
 #define INVALID         3 
+
+#define SUCCESS         1
+#define FAILED          0   
 
 extern char *external_commands[154];
 extern char path[100];
