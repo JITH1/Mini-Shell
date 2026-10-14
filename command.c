@@ -44,11 +44,11 @@ void scan_input(char *prompt, char *input_string)
             
             if(type == BUILTIN)
             {
-                execute_internal_commands(cmd); 
+                execute_internal_commands(input_string); 
             }
             else if(type == EXTERN)
             {
-                
+                execute_external_commands(input_string);
             }
             else if(type == INVALID)
             {
@@ -146,5 +146,69 @@ void execute_internal_commands(char *cmd)
         char *ch = getenv("SHELL");
         printf("%s\n",ch);
      }  
+
+}
+
+void execute_external_commands(char *cmd)
+{
+     char *buffer[15];
+
+     int i = 0 , row = 0 , col = 0;
+     
+     int space = 0 , index = 0;
+
+     char temp[15][25];
+
+     while(cmd[i] != '\0' && row < 15)
+     {
+         if(cmd[i] != ' ')
+         {
+            if(space)
+            space = 0;
+
+            if(col < 25)
+            temp[row][col++] = cmd[i]; 
+         }
+         else if(cmd[i] == ' ' && (space == 0))
+         {
+            temp[row][col] = '\0';
+            buffer[index] = temp[row];
+            index++;
+            row++ ;
+            col = 0;
+            space = 1;
+         }
+
+         i++;
+     }
+
+     if(col > 0 && col < 25)
+     {
+        temp[row][col] = '\0';
+        buffer[index] = temp[row];
+        index++;
+     }
+
+     buffer[index] = NULL ; 
+
+     i = 0;
+
+     pid_t pid = fork();
+
+     if(pid == 0)
+     {
+        execvp(buffer[0],buffer); 
+        perror("Failed ");
+        exit(1);
+     }
+     else if(pid > 0)
+     {
+        waitpid(pid,NULL,WUNTRACED);
+     }
+     else if(pid == -1)
+     {
+        printf("\nFailed to execute process...!\n");
+     }
+ 
 
 }

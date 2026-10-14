@@ -6,6 +6,8 @@
 #include<stdlib.h>
 #include<string.h>
 #include<errno.h>
+#include<sys/wait.h>
+#include<signal.h>
 
 #define RED         "\x1b[1;31m"
 #define GREEN       "\x1b[1;32m"
