@@ -1,6 +1,8 @@
 #ifndef SHELL_H
 #define SHELL_H
 
+#include "jobs.h"
+
 #include<fcntl.h>
 #include<unistd.h>
 #include<stdlib.h>
@@ -27,7 +29,7 @@ extern char path[100];
 extern char *builtins[];
 extern char get_cmd[20];
 
-void scan_input(char *prompt, char *input_string);
+void scan_input(char *prompt, char *input_string,size_t size);
 void print_path(char *prompt,char *path);
 char* get_command(char *cmd);
 int cmd_type(char *cmd);

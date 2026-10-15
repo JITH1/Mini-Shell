@@ -4,8 +4,9 @@
 char path[100];
 char *external_commands[154];
 int status ;
+int background = 0;
 
-void scan_input(char *prompt, char *input_string)
+void scan_input(char *prompt, char *input_string,size_t size)
 {
     
     if(!extract_external_commands(external_commands)) // Export the external commands stored in the file
@@ -21,10 +22,28 @@ void scan_input(char *prompt, char *input_string)
         }
     } 
 
+    Job jobs[MAX_JOBS];
+
     while(1)
     {
+
         print_path(prompt,path);  
-        scanf(" %49[^\n]",input_string);  // Enter the Command 
+
+        if(fgets(input_string,size,stdin) == NULL)  // Enter the Command 
+        {
+             break ;
+        }  
+
+        input_string[strcspn(input_string,"\n")] = '\0';
+
+        size_t len = strlen(input_string);
+
+        if(len > 0 && input_string[len-1] == '&')
+        {
+            background = 1;
+            execute_bg(input_string,jobs);
+            continue;
+        }
 
         if(strncmp(input_string,"PS1=",4) == 0) // If present
         {
@@ -112,6 +131,11 @@ void execute_internal_commands(char *cmd)
          if(!flag)
          {
              char *ptr = getcwd(path,100); // On successfully changing the direcctory the new path is stored inside the path array
+
+             if(ptr == NULL)
+             {
+                return ;
+             }
          }
          else
          {
@@ -125,11 +149,16 @@ void execute_internal_commands(char *cmd)
      else if(strncmp(cmd,"pwd",3) == 0)
      {
           char *ptr = getcwd(path,100);
+
+          if(ptr)
           printf("%s\n",ptr);
+          else
+          perror("pwd");
+
      }
      else if(strncmp(cmd,"exit",4) == 0)
      {
-        _exit(0);
+         exit(0);
      }
      else if(strncmp(cmd,"echo $$",7) == 0)
      {
@@ -137,14 +166,24 @@ void execute_internal_commands(char *cmd)
      }
      else if(strncmp(cmd,"echo $?",7) == 0)
      {
-          printf("%d ",WEXITSTATUS(status)); 
-          if(cmd+7 != NULL)
-          printf("%s\n",cmd+7);
+          if(WIFEXITED(status))
+          {
+              printf("%d \n",WEXITSTATUS(status)); 
+          }
+          else if(WIFSIGNALED(status))
+          {
+              printf("%d\n",128+WTERMSIG(status));
+          }
      } 
      else if(strncmp(cmd,"echo $SHELL",11) == 0)
      {
         char *ch = getenv("SHELL");
+
+        if(ch)
         printf("%s\n",ch);
+        else
+        printf("\n");
+
      }  
 
 }
@@ -210,5 +249,5 @@ void execute_external_commands(char *cmd)
         printf("\nFailed to execute process...!\n");
      }
  
-
 }
+
