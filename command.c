@@ -22,10 +22,12 @@ void scan_input(char *prompt, char *input_string,size_t size)
         }
     } 
 
-    Job jobs[MAX_JOBS];
+    Job *Head = NULL;
 
     while(1)
     {
+
+        handle_background_jobs(&Head);
 
         print_path(prompt,path);  
 
@@ -38,10 +40,12 @@ void scan_input(char *prompt, char *input_string,size_t size)
 
         size_t len = strlen(input_string);
 
+        background = 0;
+
         if(len > 0 && input_string[len-1] == '&')
         {
             background = 1;
-            execute_bg(input_string,jobs);
+            execute_bg(input_string,&Head);
             continue;
         }
 
@@ -54,6 +58,22 @@ void scan_input(char *prompt, char *input_string,size_t size)
             } 
 
             strcpy(prompt,input_string+4);
+        }
+        else if(strcmp(input_string,"jobs") == 0)
+        {
+            print_jobs(&Head);    
+        }
+        else if(strcmp(input_string,"jobs -l") == 0)
+        {
+             print_jobs_pid(&Head);
+        }
+        else if(strcmp(input_string,"jobs -r") == 0)
+        {
+            print_run_jobs(&Head);
+        }
+        else if(strcmp(input_string,"jobs -s") == 0)
+        {
+            print_stop_jobs(&Head);
         }
         else
         {

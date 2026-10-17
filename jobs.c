@@ -4,7 +4,7 @@
 int job_count = 0;
 int next_job_id = 1;
 
-int add_job(pid_t pid,const char *cmd,State state,Job jobs[])
+int add_job(pid_t pid,const char *cmd,State state,Job **Head)
 {
     if(job_count >= MAX_JOBS)
     {
@@ -12,52 +12,156 @@ int add_job(pid_t pid,const char *cmd,State state,Job jobs[])
         return FAILED;
     }
 
-    int i = job_count++;
+    job_count++;
+
+    if(*Head == NULL)
+    {
+        Job *new = (Job *)malloc(sizeof(Job));
+        new->job_id = next_job_id++;
+        new->job_pid = pid; 
+        new->job_state = state;
+        snprintf(new->command,sizeof(new->command),"%s",cmd);
+        new->link = NULL;
+        *Head = new;
+        return new->job_id; 
+    }
     
-    jobs[i].job_id = next_job_id++;
-    jobs[i].job_pid = pid;
-    jobs[i].job_state = state;
-    snprintf(jobs[i].command,sizeof(jobs[i].command),"%s",cmd);
+    Job *temp = *Head;
 
-    return jobs[i].job_id;
+    while(temp->link != NULL)
+    {
+        temp = temp->link;
+    }
+
+    Job *new = (Job *)malloc(sizeof(Job));
+    new->job_id = next_job_id++;
+    new->job_pid = pid; 
+    new->job_state = state;
+    snprintf(new->command,sizeof(new->command),"%s",cmd);
+    new->link = NULL;
+    temp->link = new;
+
+    return new->job_id; 
 }
 
-int find_job_by_pid(pid_t pid,Job jobs[])
+Job* find_job_by_pid(pid_t pid,Job **Head)
 {
-    for(int i = 0; i<job_count ; i++)
+    for(Job *temp = *Head ; temp != NULL ; temp = temp->link)
     {
-        if(pid == jobs[i].job_pid)
+        if(pid == temp->job_pid)
         {
-            return SUCCESS;
+            return temp;
         }
 
+    }
+
+    return NULL;
+}
+
+Job* find_job_by_id(int id,Job **Head)
+{
+    for(Job *temp = *Head ; temp != NULL ; temp = temp->link)
+    {
+        if(id == temp->job_id)
+        {
+            return temp;
+        }
+    }
+
+    return NULL;
+}
+
+void print_jobs(Job **Head)
+{
+    for(Job *temp = *Head ; temp != NULL ; temp = temp->link)
+    {
+        if(temp->link != NULL)
+        printf("[%d]- %s\t%s\n",temp->job_id,temp->job_state == RUNNING ? "Running":"Done",temp->command);
+        else if(temp->link == NULL)
+        printf("[%d]+ %s\t%s\n",temp->job_id,temp->job_state == RUNNING ? "Running":"Done",temp->command);
+    }
+}
+
+void print_jobs_pid(Job **Head)
+{
+    for(Job *temp = *Head ; temp != NULL ; temp = temp->link)
+    {
+        if(temp->link != NULL)
+        printf("[%d]- %d %s\t%s\n",temp->job_id,temp->job_pid,temp->job_state == RUNNING ? "Running":"Done",temp->command);
+        else if(temp->link == NULL)
+        printf("[%d]+ %d %s\t%s\n",temp->job_id,temp->job_pid,temp->job_state == RUNNING? "Running":"Done",temp->command);
+    }
+}
+
+void print_run_jobs(Job **Head)
+{
+    for(Job *temp = *Head ; temp != NULL ; temp = temp->link)
+    {
+        if((temp->link != NULL) && (temp->job_state == RUNNING))
+        printf("[%d]- %s\t%s\n",temp->job_id,"Running",temp->command);
+        else if((temp->link == NULL) && (temp->job_state == RUNNING))
+        printf("[%d]+ %s\t%s\n",temp->job_id,"Running",temp->command);
+    }
+}
+
+void print_stop_jobs(Job **Head)
+{
+    for(Job *temp = *Head ; temp != NULL ; temp = temp->link)
+    {
+        if(temp->job_state == STOP)
+        {
+            printf("[%d] Stopped\t%s\n",temp->job_id, temp->command);
+        }
+    }
+}
+
+int update_job(pid_t pid,State state,Job **Head)
+{
+    Job *temp = find_job_by_pid(pid,Head);
+
+    if(temp)
+    {
+        temp->job_state = state;
+        return SUCCESS;
     }
 
     return FAILED;
 }
 
-int find_job_by_id(int id,Job jobs[])
+void remove_job(pid_t pid,Job **Head)
 {
-    for(int i = 0; i<job_count ; i++)
+    Job *found = find_job_by_pid(pid,Head);
+
+    if(found == NULL)
     {
-        if(id == jobs[i].job_id)
-        {
-            return SUCCESS;
-        }
+        return;
+    }
+   
+    Job *temp = *Head;
+
+    if(temp == found)
+    {
+        *Head = found->link;
+        free(found);
+        job_count--; 
+        return;
     }
 
-    return FAILED;
-}
-
-void print_jobs(Job jobs[])
-{
-    for(int i = 0 ; i<job_count ; i++)
+    while(temp != NULL && temp->link != found)
     {
-        printf("[%d] %s\t%s\n",jobs[i].job_id,jobs[i].job_state == RUNNING? "Running":"Stopped",jobs[i].command);
+        temp = temp->link;
     }
+
+    if(temp == NULL)
+    return;
+
+    temp->link = found->link;
+    free(found);
+    job_count--;
+
 }
 
-void execute_bg(const char *cmd,Job jobs[])
+void execute_bg(const char *cmd,Job **Head)
 {
     char buffer[100];
 
@@ -117,39 +221,45 @@ void execute_bg(const char *cmd,Job jobs[])
     {
         if(background)
         {
-            int p = add_job(pid,buffer,RUNNING,jobs);
+            int p = add_job(pid,buffer,RUNNING,Head);
 
             if(p)
             {
                 printf("[%d] %d\n",p,pid);
             }
         }
-        else
-        {
-            int status;
-
-            while(waitpid(pid,&status,WUNTRACED) == -1)
-            { 
-                 if(errno == EINTR)
-                 {
-                    continue;
-                 }
-            }  
-
-            if(WIFEXITED(status))
-            {
-                int id = add_job(pid,buffer,STOP,jobs);
-
-                if(id)
-                printf("[%d]+ Stopped\t%s\n",id,buffer);
-            }
-        }
+       
     }
     else 
     {
         perror("fork");
     }
-
     
+}
+
+void handle_background_jobs(Job **Head)
+{
+    pid_t pid;
+    int child_status;
+
+    while((pid = waitpid(-1,&status,WNOHANG|WUNTRACED|WCONTINUED) ) > 0)
+    {
+        if(WIFEXITED(child_status))
+        {   
+            remove_job(pid, Head);
+        }
+        else if(WIFSIGNALED(child_status))
+        {
+            remove_job(pid, Head);
+        }
+        else if(WIFSTOPPED(child_status))
+        {
+            update_job(pid, STOP, Head);
+        }
+        else if(WIFCONTINUED(child_status))
+        {
+            update_job(pid, RUNNING, Head);
+        }
+    }
 }
 
