@@ -4,7 +4,7 @@
 int job_count = 0;
 int next_job_id = 1;
 
-int add_job(pid_t pid,const char *cmd,State state,Job **Head)
+int add_job(pid_t pid,const char *cmd,State state,Type type,Job **Head)
 {
     if(job_count >= MAX_JOBS)
     {
@@ -20,6 +20,7 @@ int add_job(pid_t pid,const char *cmd,State state,Job **Head)
         new->job_id = next_job_id++;
         new->job_pid = pid; 
         new->job_state = state;
+        new->job_type = type;
         snprintf(new->command,sizeof(new->command),"%s",cmd);
         new->link = NULL;
         *Head = new;
@@ -37,6 +38,7 @@ int add_job(pid_t pid,const char *cmd,State state,Job **Head)
     new->job_id = next_job_id++;
     new->job_pid = pid; 
     new->job_state = state;
+    new->job_type = type;
     snprintf(new->command,sizeof(new->command),"%s",cmd);
     new->link = NULL;
     temp->link = new;
@@ -221,7 +223,7 @@ void execute_bg(const char *cmd,Job **Head)
     {
         if(background)
         {
-            int p = add_job(pid,buffer,RUNNING,Head);
+            int p = add_job(pid,buffer,RUNNING,BG,Head);
 
             if(p)
             {
@@ -242,7 +244,7 @@ void handle_background_jobs(Job **Head)
     pid_t pid;
     int child_status;
 
-    while((pid = waitpid(-1,&status,WNOHANG|WUNTRACED|WCONTINUED) ) > 0)
+    while((pid = waitpid(-1,&child_status,WNOHANG|WUNTRACED|WCONTINUED) ) > 0)
     {
         if(WIFEXITED(child_status))
         {   
@@ -259,6 +261,43 @@ void handle_background_jobs(Job **Head)
         else if(WIFCONTINUED(child_status))
         {
             update_job(pid, RUNNING, Head);
+        }
+    }
+}
+
+void siganl_sigint(int signum)
+{
+    check_list(&Head);
+}
+
+void check_list(Job **Head)
+{
+    for(Job *temp = *Head ; temp!=NULL ; temp = temp->link)
+    {
+        if(temp->job_type == FG)
+        {
+           kill(temp->job_pid,SIGKILL);
+           break;
+        }
+    }
+
+}
+
+void signal_stop(int signum)
+{
+    stop_fg(&Head);
+}
+
+void stop_fg(Job **Head)
+{
+    for(Job *temp = *Head ; temp!=NULL ; temp = temp->link)
+    {
+        if(temp->job_type == FG)
+        {
+           kill(temp->job_pid,SIGSTOP);
+           update_job(temp->job_pid,STOP,Head);
+           printf("\n");
+           break;
         }
     }
 }

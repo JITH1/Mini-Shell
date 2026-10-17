@@ -11,11 +11,18 @@ typedef enum
     RUNNING
 }State;
 
+typedef enum
+{
+    FG,
+    BG
+}Type;
+
 typedef struct node
 {
     int job_id;
     pid_t job_pid;
     State job_state;
+    Type job_type;
     char command[100];
     struct node *link;
 }Job;
@@ -25,8 +32,9 @@ extern int next_job_id ;
 extern int background;
 extern Job *Head;
 extern int status ;
+extern int foreground ;
 
-int add_job(pid_t pid,const char *cmd,State state,Job **Head);
+int add_job(pid_t pid,const char *cmd,State state,Type type,Job **Head);
 int update_job(pid_t pid,State state,Job **Head);
 void remove_job(pid_t pid,Job **Head);
 Job* find_job_by_pid(pid_t pid,Job **Head);
@@ -37,6 +45,10 @@ void print_run_jobs(Job **Head);
 void print_stop_jobs(Job **Head);
 void execute_bg(const char *cmd,Job **Head);
 void handle_background_jobs(Job **Head);
+void siganl_sigint(int signum);
+void check_list(Job **Head);
+void signal_stop(int signum);
+void stop_fg(Job **Head);
 
 #endif
 

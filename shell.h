@@ -36,6 +36,6 @@ int cmd_type(char *cmd);
 
 int extract_external_commands(char **ext); 
 void execute_internal_commands(char *cmd);
-void execute_external_commands(char *cmd);
+void execute_external_commands(char *cmd,Job **Head);
 
 #endif

@@ -5,6 +5,8 @@ char path[100];
 char *external_commands[154];
 int status ;
 int background = 0;
+int foreground = 0;
+Job *Head = NULL;
 
 void scan_input(char *prompt, char *input_string,size_t size)
 {
@@ -21,12 +23,12 @@ void scan_input(char *prompt, char *input_string,size_t size)
             //  printf("\nPWD : %s\n",path);
         }
     } 
-
-    Job *Head = NULL;
+    
+    signal(SIGINT,siganl_sigint);
+    signal(SIGTSTP,signal_stop);
 
     while(1)
     {
-
         handle_background_jobs(&Head);
 
         print_path(prompt,path);  
@@ -87,7 +89,8 @@ void scan_input(char *prompt, char *input_string,size_t size)
             }
             else if(type == EXTERN)
             {
-                execute_external_commands(input_string);
+                foreground = 1;
+                execute_external_commands(input_string,&Head);
             }
             else if(type == INVALID)
             {
@@ -208,7 +211,7 @@ void execute_internal_commands(char *cmd)
 
 }
 
-void execute_external_commands(char *cmd)
+void execute_external_commands(char *cmd,Job **Head)
 {
      char *buffer[15];
 
@@ -262,7 +265,43 @@ void execute_external_commands(char *cmd)
      }
      else if(pid > 0)
      {
-        waitpid(pid,NULL,WUNTRACED);
+         int p = add_job(pid,cmd,RUNNING,FG,Head);
+         int stat ;
+         int ret;
+
+         if(!p)
+         {
+            printf("\nFailed to add the foreground process...!\n");
+            return;
+         }
+
+         do
+         {
+            ret = waitpid(pid, &stat, WUNTRACED);
+         }while (ret == -1 && errno == EINTR);
+
+        if(ret == pid)
+        {
+          
+            if(WIFEXITED(stat))
+            {
+               status = stat;
+               remove_job(pid, Head);
+            }
+            else if (WIFSIGNALED(stat))
+            {
+               status = stat;
+               remove_job(pid, Head);
+            }
+            else if (WIFSTOPPED(stat))
+            {
+               update_job(pid, STOP, Head);
+            }
+        }
+        else if (ret == -1)
+        {
+            perror("waitpid");
+        }
      }
      else if(pid == -1)
      {
