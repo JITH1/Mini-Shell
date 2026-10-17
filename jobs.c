@@ -296,8 +296,120 @@ void stop_fg(Job **Head)
         {
            kill(temp->job_pid,SIGSTOP);
            update_job(temp->job_pid,STOP,Head);
-           printf("\n");
+           printf("[%d]+    %s          %s\n",temp->job_id,"Stopped",temp->command);
            break;
+        }
+    }
+
+}
+
+void do_fg(char *cmd,Job **Head)
+{
+    if(cmd[2] != '\0')
+    {
+        printf("fg: %s: no such job\n",cmd);
+        return;
+    }
+
+    int id ;
+
+    if(sscanf(cmd,"%*c%d",&id) != 1)
+    {
+        printf("fg: %s: no such job\n",cmd);
+        return;
+    }
+
+    if(*Head == NULL)
+    {
+        printf("fg: %s: no such job\n",cmd);
+        return;
+    } 
+
+    Job *temp = find_job_by_id(id,Head);
+
+    if(temp == NULL)
+    {
+        printf("fg: %s: no such job\n",cmd);
+        return;
+    }
+
+    pid_t pid = temp->job_pid;
+
+    if (temp->job_state == STOP)
+    {
+        if (kill(pid, SIGCONT) == -1)
+        {
+            perror("fg: SIGCONT");
+            return;
+        }
+
+        temp->job_state = RUNNING;
+    }
+
+    temp->job_type = FG;
+
+    int child_status;
+
+    pid_t ret;
+
+    do
+    {
+        ret = waitpid(pid, &child_status, WUNTRACED);
+    }
+    while (ret == -1 && errno == EINTR);
+
+    if (ret == -1)
+    {
+        perror("fg: waitpid");
+        return;
+    }
+
+    if (WIFEXITED(child_status) || WIFSIGNALED(child_status))
+    {
+        status = child_status;
+        remove_job(pid, Head);
+    }
+    else if (WIFSTOPPED(child_status))
+    {
+        update_job(pid, STOP, Head);
+        temp->job_type = BG;
+    }
+
+}
+
+void do_bg(char *cmd,Job **Head)
+{
+
+    if(cmd[2] != '\0')
+    {
+        printf("bg: %s: no such job\n",cmd);
+        return;
+    }
+
+    int id ;
+
+    if(sscanf(cmd,"%*c%d",&id) != 1)
+    {
+        printf("bg: %s: no such job\n",cmd);
+        return;
+    }
+
+    if(*Head == NULL)
+    {
+        printf("bg: %s: no such job\n",cmd);
+        return;
+    }
+
+    for(Job *temp = *Head ; temp != NULL ; temp = temp->link)
+    {
+        if(temp->job_state == STOP)
+        {
+            kill(temp->job_pid,SIGCONT);
+            temp->job_state = RUNNING;
+            temp->job_type = BG;
+            printf("[%d]    %s%c\n",temp->job_id,temp->command,'&');
+            printf("[%d]    %s      %s\n",temp->job_id,"Done",temp->command);
+            return;
         }
     }
 }

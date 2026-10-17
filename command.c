@@ -77,6 +77,14 @@ void scan_input(char *prompt, char *input_string,size_t size)
         {
             print_stop_jobs(&Head);
         }
+        else if(strncmp(input_string,"fg",2) == 0)
+        {
+            do_fg(input_string+3,&Head);  
+        }
+        else if(strncmp(input_string,"bg",2) == 0)
+        {
+            do_bg(input_string+3,&Head);
+        }
         else
         {
             char *cmd = get_command(input_string);    // Get command from the arguments 

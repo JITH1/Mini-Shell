@@ -49,6 +49,8 @@ void siganl_sigint(int signum);
 void check_list(Job **Head);
 void signal_stop(int signum);
 void stop_fg(Job **Head);
+void do_fg(char *cmd,Job **Head);
+void do_bg(char *cmd,Job **Head);
 
 #endif
 

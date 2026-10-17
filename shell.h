@@ -28,6 +28,7 @@ extern char *external_commands[154];
 extern char path[100];
 extern char *builtins[];
 extern char get_cmd[20];
+extern char prompt_string[];
 
 void scan_input(char *prompt, char *input_string,size_t size);
 void print_path(char *prompt,char *path);
