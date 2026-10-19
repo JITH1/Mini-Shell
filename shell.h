@@ -39,4 +39,7 @@ int extract_external_commands(char **ext);
 void execute_internal_commands(char *cmd);
 void execute_external_commands(char *cmd,Job **Head);
 
+int validate_pipe(char *cmd);
+void execute_pipe(char *cmd);
+
 #endif

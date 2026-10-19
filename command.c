@@ -31,6 +31,8 @@ void scan_input(char *prompt, char *input_string,size_t size)
     {
         handle_background_jobs(&Head);
 
+        sleep(1);
+
         print_path(prompt,path);  
 
         if(fgets(input_string,size,stdin) == NULL)  // Enter the Command 
@@ -49,6 +51,15 @@ void scan_input(char *prompt, char *input_string,size_t size)
             background = 1;
             execute_bg(input_string,&Head);
             continue;
+        }
+
+        if(strchr(input_string,'|'))
+        {
+            if(validate_pipe(input_string))
+            {
+                execute_pipe(input_string);
+                continue;
+            }
         }
 
         if(strncmp(input_string,"PS1=",4) == 0) // If present
