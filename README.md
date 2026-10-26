@@ -150,6 +150,9 @@ For a pipeline of `N` commands the shell creates `N - 1` pipes and forks `N` chi
      │                 │             invalid        │
      └─────────────────┴──────────────────┴─────────┘
 ```
+--- 
+
+<img width="5993" height="8396" alt="diagram (1)" src="https://github.com/user-attachments/assets/e2f70387-4129-4395-aeef-b7adfb852bf6" />
 
 ---
 
